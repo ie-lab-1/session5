@@ -1,64 +1,92 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
+# encoding: utf8
 #
+# Copyright © Burak Arslan <burak at arskom dot com dot tr>,
+#             Arskom Ltd. http://www.arskom.com.tr
+# All rights reserved.
 #
-# This library is free software; you can redistribute it and/or
-# modify it under the terms of the GNU Lesser General Public
-# License as published by the Free Software Foundation; either
-# version 2.1 of the License, or (at your option) any later version.
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
 #
-# This library is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-# Lesser General Public License for more details.
+#    1. Redistributions of source code must retain the above copyright notice,
+#       this list of conditions and the following disclaimer.
+#    2. Redistributions in binary form must reproduce the above copyright
+#       notice, this list of conditions and the following disclaimer in the
+#       documentation and/or other materials provided with the distribution.
+#    3. Neither the name of the owner nor the names of its contributors may be
+#       used to endorse or promote products derived from this software without
+#       specific prior written permission.
 #
-# You should have received a copy of the GNU Lesser General Public
-# License along with this library; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
+# OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+# NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
+# EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-import soaplib
 
-from soaplib.core.service import soap
-from soaplib.core.service import DefinitionBase
-from soaplib.core.model.primitive import String, Integer
-
-from soaplib.core.server import wsgi
-from soaplib.core.model.clazz import Array
-
-'''
+"""
 This is a simple HelloWorld example to show the basics of writing
-a webservice using soaplib, starting a server, and creating a service
+a webservice using spyne, starting a server, and creating a service
 client.
-'''
+Here's how to call it using suds:
+#>>> from suds.client import Client
+#>>> c = Client('http://localhost:8000/?wsdl')
+#>>> c.service.say_hello('punk', 5)
+(stringArray){
+   string[] =
+      "Hello, punk",
+      "Hello, punk",
+      "Hello, punk",
+      "Hello, punk",
+      "Hello, punk",
+ }
+#>>>
+"""
 
-class HelloWorldService(DefinitionBase):
-    @soap(String, Integer, _returns=Array(String))
-    def say_hello(self, name, times):
-        '''
-        Docstrings for service methods appear as documentation in the wsdl
-        <b>what fun</b>
+
+from spyne import Application, rpc, ServiceBase, Iterable, Integer, Unicode
+
+from spyne.protocol.soap import Soap11
+from spyne.server.wsgi import WsgiApplication
+
+
+class HelloWorldService(ServiceBase):
+    @rpc(Unicode, Integer, _returns=Iterable(Unicode))
+    def say_hello(ctx, name, times):
+        """Docstrings for service methods appear as documentation in the wsdl.
+        <b>What fun!</b>
         @param name the name to say hello to
-        @param the number of times to say hello
+        @param times the number of times to say hello
         @return the completed array
-        '''
-        results = []
-        for i in range(0, times):
-            results.append('Hello, %s' % name)
-        return results
+        """
+
+        for i in range(times):
+            yield u'Hello, %s' % name
 
 
-if __name__=='__main__':
-    try:
-        from wsgiref.simple_server import make_server
-        soap_application = soaplib.core.Application([HelloWorldService], 'tns')
-        wsgi_application = wsgi.Application(soap_application)
+application = Application([HelloWorldService], 'spyne.examples.hello.soap',
+                          in_protocol=Soap11(validator='lxml'),
+                          out_protocol=Soap11())
 
-        print "listening to http://0.0.0.0:7789"
-        print "wsdl is at: http://127.0.0.1:7789/?wsdl"
+wsgi_application = WsgiApplication(application)
 
-        server = make_server('localhost', 7789, wsgi_application)
-        server.serve_forever()
 
-    except ImportError:
-        print "Error: example server code requires Python >= 2.5"
+if __name__ == '__main__':
+    import logging
+
+    from wsgiref.simple_server import make_server
+
+    logging.basicConfig(level=logging.DEBUG)
+    logging.getLogger('spyne.protocol.xml').setLevel(logging.DEBUG)
+
+    logging.info("listening to http://127.0.0.1:8000")
+    logging.info("wsdl is at: http://localhost:8000/?wsdl")
+
+    server = make_server('127.0.0.1', 8000, wsgi_application)
+    server.serve_forever()
