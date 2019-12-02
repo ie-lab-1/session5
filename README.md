@@ -34,7 +34,7 @@ from suds.client import Client as SudsClient
 url = 'http://127.0.0.1:80/soap/someservice?wsdl'
 client = SudsClient(url=url, cache=None)
 r = client.service.echo(str='hello world', cnt=3)
-print r
+print (r)
 ```
 That can be run using the file client.py, using the right url: local or remote aws
 ```
