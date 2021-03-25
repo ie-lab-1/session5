@@ -6,7 +6,7 @@ Jinja2==2.10.3
 lxml==4.4.2
 MarkupSafe==1.1.1
 pytz==2019.3
-PyYAML==5.1.2
+PyYAML==5.4
 sec-wall==1.2
 spyne==2.12.16
 Werkzeug==0.16.0
